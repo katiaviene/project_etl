@@ -8,7 +8,6 @@ import os
 
 load_dotenv()
 API_KEY = os.getenv('API_KEY')
-url = f"https://serpapi.com/search?engine=google_trends"
 keyword = ','.join(["vpn", "antivirus", "ad blocker", "password manager"])
 region = 'US'
 date_range = "2024-12-01 2025-04-02"
@@ -24,18 +23,24 @@ def get_parameters(api_key, keywords, date_range, region):
             "date": date_range
             }
 
-def get_data(url, params):
+def get_data(params):
 
     search = GoogleSearch(params)
     results = search.get_dict()
     return results
 
+def get_column(x, key):
+    return x.get(key,'') if isinstance(x, dict) else ''
+
+def set_column(df, keys):
+    for key in keys:
+        df[key] = df[''].apply(get_column(key))
+    
+    
 def normalize_data(results):
-    try:
-        df = pd.json_normalize(results)
-        print(df.columns)
-    except (SyntaxError, ValueError) as e:
-        print("Invalid JSON-like structure:", e)
+    df = pd.json_normalize(results)
+    print(df.columns)
+
 
 
     df_last = df[['interest_over_time.timeline_data',  'interest_over_time.averages']]
@@ -43,7 +48,7 @@ def normalize_data(results):
     df_exploded = df_last.explode(['interest_over_time.timeline_data']).explode(['interest_over_time.averages'])
 
 
-    df_exploded['date'] = df_exploded['interest_over_time.timeline_data'].apply(lambda x: x.get('date', '') if isinstance(x, dict) else '')
+    df_exploded['date'] = df_exploded['interest_over_time.timeline_data'].apply()
     df_exploded['query'] =  df_exploded['interest_over_time.averages'].apply(lambda x: x.get('query', '') if isinstance(x, dict) else '')
     df_exploded['value'] =  df_exploded['interest_over_time.averages'].apply(lambda x: x.get('value', '') if isinstance(x, dict) else '')
     print(df_exploded[['date', 'query', 'value']])
