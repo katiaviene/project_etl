@@ -12,7 +12,7 @@ API_KEY = os.getenv('API_KEY')
 keyword = ','.join(["vpn", "antivirus", "ad blocker", "password manager"])
 region = 'US'
 date_range = "2024-12-01 2025-04-02"
-
+keys = ['date', 'query', 'value']
 
 def get_parameters(api_key, keywords, date_range, region):
     return {
