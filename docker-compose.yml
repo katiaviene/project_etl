@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:13 
+    container_name: postgres_db
+    environment:
+      POSTGRES_USER: user 
+      POSTGRES_PASSWORD: password  
+      POSTGRES_DB: mydatabase  
+    ports:
+      - "5432:5432"  
+    volumes:
+      - postgres_data:/var/lib/postgresql/data 
+
+  data-extractor:
+    build: .
+    container_name: data_extractor
+    depends_on:
+      - db
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/mydatabase  
+    restart: no
+    volumes:
+      - .:/app  
+    working_dir: /app
+
+volumes:
+  postgres_data:
