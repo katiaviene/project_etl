@@ -5,6 +5,7 @@ import json
 import ast
 from dotenv import load_dotenv
 import os
+from utils.utils import get_column, set_column
 
 load_dotenv()
 API_KEY = os.getenv('API_KEY')
@@ -29,23 +30,15 @@ def get_data(params):
     results = search.get_dict()
     return results
 
-def get_column(x, key):
-    return x.get(key,'') if isinstance(x, dict) else ''
-
-def set_column(df, keys):
-    for key in keys:
-        df[key] = df[''].apply(get_column(key))
-    
     
 def normalize_data(results):
     df = pd.json_normalize(results)
     print(df.columns)
-
-
-
     df_last = df[['interest_over_time.timeline_data',  'interest_over_time.averages']]
-    print(df_last)
     df_exploded = df_last.explode(['interest_over_time.timeline_data']).explode(['interest_over_time.averages'])
+    df_exploded['data'] = df_exploded.apply(
+    lambda row: {**row['interest_over_time.timeline_data'], **row['interest_over_time.averages']}, axis=1
+        )
 
 
     df_exploded['date'] = df_exploded['interest_over_time.timeline_data'].apply()
