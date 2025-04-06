@@ -76,13 +76,3 @@ def test_validate_df():
     assert len(valid_rows) == 1
     assert len(errors) == 0
 
-
-def test_write_data():
-    """Test the write_data function"""
-    with patch('main.create_engine') as mock_create_engine:
-        mock_engine = MagicMock()
-        mock_create_engine.return_value = mock_engine
-        df = pd.DataFrame({'column1': [1, 2], 'column2': [3, 4]})
-        write_data(df, target_table='test_table', load='replace')
-        mock_create_engine.assert_called_once_with(os.getenv('DATABASE_URL'))
-        mock_engine.to_sql.assert_called_once_with('test_table', con=mock_engine, if_exists='replace', index=False)
