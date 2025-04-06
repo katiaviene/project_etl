@@ -1,22 +1,26 @@
 import pandas as pd
 from serpapi import GoogleSearch
 from dotenv import load_dotenv
+import yaml
 import os
 from utils import utils
 from datetime import date, timedelta
-from sklearn.linear_model import LinearRegression
 import numpy as np
 from sqlalchemy import create_engine
+from validation import SearchTrendModel
+from pydantic import ValidationError
+from prediction import predict_next_week
 
 load_dotenv()
 API_KEY = os.getenv('API_KEY')
 DATABASE_URL = os.getenv('DATABASE_URL')
-keyword = ','.join(["vpn", "antivirus", "ad blocker", "password manager"])
-region = 'US'
-date_range = " ".join([(date.today()-timedelta(days=180)).strftime('%Y-%m-%d'), date.today().strftime('%Y-%m-%d') ])
-keys = ['date', 'query', 'value']
 
-def get_parameters(api_key, keywords, date_range, region):
+def load_config(config_file):
+    with open(config_file, 'r') as file:
+        config = yaml.safe_load(file)
+    return config
+
+def get_parameters(api_key, keywords, date_range=None, region=None):
     return {
             "engine": "google_trends",
             "q": keywords,
@@ -31,46 +35,52 @@ def get_data(params):
     results = search.get_dict()
     return results
 
-    
-def normalize_data(results):
+def normalize_data(results, fields):
     df = pd.json_normalize(results)
-    print(df.columns)
-    df_last = df[['interest_over_time.timeline_data',  'interest_over_time.averages']]
-    df_exploded = df_last.explode(['interest_over_time.timeline_data']).explode(['interest_over_time.averages'])
-    df_exploded['data'] = df_exploded.apply(
-    lambda row: {**row['interest_over_time.timeline_data'], **row['interest_over_time.averages']}, axis=1
-        )
-    return df_exploded
+    df_last = df[fields]
+    df_exploded = df_last.explode(fields[0])
+    df_exploded['data'] = df_exploded[fields[0]].apply(lambda x: x.get('values'))
+    dff = df_exploded.explode('data')
+    dff['data'] = dff.apply(lambda x: {**x['data'], 'date': x[fields[0]].get('date')} if isinstance(x['data'], dict) else x['data'], axis=1)
+    return dff
 
-def write_data(df):
+def validate_df(df):
+    valid_rows = []
+    errors = []
+
+    for idx, row in df.iterrows():
+        try:
+            validated = SearchTrendModel(**row.to_dict())
+            valid_rows.append(validated)
+        except ValidationError as e:
+            errors.append((idx, e))
+
+    return valid_rows, errors
+
+def write_data(df, target_table, load="replace"):
     engine = create_engine(DATABASE_URL)
-    df.to_sql('search_data', con=engine, if_exists='replace', index=False)
-
-
-def predict(df):
-    df['date'] = pd.to_datetime(df['date'])
-    df['date_ordinal'] = df['date'].map(lambda x: x.toordinal())
-
-    # Define features (X) and target (y)
-    X = df[['date_ordinal', 'value']]
-    y = df['value']
-
-    # Train regression model
-    model = LinearRegression()
-    model.fit(X, y)
-
-    # Predict next week's searches
-    next_week_date = (df['date'].max() + pd.Timedelta(days=7)).toordinal()
-    next_week_features = np.array([[next_week_date, 0.5, 3000]])  # Example future values
-    predicted_value = model.predict(next_week_features)
-
-    print(f"Predicted search volume for next week: {predicted_value[0]:.2f}")
+    df.to_sql(target_table, con=engine, if_exists=load, index=False)
+    print("Data loaded")
 
 if __name__ == '__main__':
-    parameters = get_parameters(api_key=API_KEY, keywords=keyword, date_range=date_range, region=region)
-    data_json = get_data(parameters)
-    df = normalize_data(data_json)
-    df = utils.set_column(df, keys) 
-    # predict(df)
-    print(df)
-    write_data(df)
+    config = load_config("api_config.yml")
+    for api in config.get("api", []):
+        print(f'{api.get("name", "unknown")} loading')
+        print(f'target:{api.get("target")}')
+        date_range = " ".join([(date.today()-timedelta(days=api.get("parameters", {}).get("period", 0))).strftime('%Y-%m-%d'), date.today().strftime('%Y-%m-%d') ])
+
+        parameters = get_parameters( api_key=API_KEY,
+                                     keywords=', '.join(api.get("parameters", {}).get("keywords", [])),
+                                     date_range=date_range,
+                                     region=api.get("parameters", {}).get("region", None)
+                                    )
+        data_json = get_data(parameters)
+        df = normalize_data(data_json, api.get("fields", []))
+        df = utils.set_column(df, api.get("target_columns", [])) 
+        print(f'Data sample:\n {df.sort_values(by="date", ascending=False).head()}')
+        valid, errs = validate_df(df)
+        print(f"Valid:{len(valid)}, error: {len(errs)}")
+        if not errs:
+            write_data(df=df, target_table=api.get("target", ""), load=api.get("load", "replace") )
+            "Data is loaded"
+        print(f'Predicted values of searches:\n{predict_next_week(df, api.get("predict_period", 1))}')

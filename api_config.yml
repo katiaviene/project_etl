@@ -1,0 +1,20 @@
+api:
+  - name: "google_trends"
+    target: "google_trends_search_data"
+    load: "replace"
+    parameters: 
+      keywords: 
+       - vpn
+       - antivirus
+       - ad blocker
+       - password manager
+      region: "US"
+      period: 180
+    target_columns:
+      - date
+      - query
+      - value
+    fields:
+      - interest_over_time.timeline_data
+    predict_period: 7
+

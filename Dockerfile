@@ -5,9 +5,8 @@ FROM python:3.10-slim
 WORKDIR /app
 
 # Copy the script into the container
-COPY main.py /app/
-COPY requirements.txt /app/
-COPY utils /app/
+COPY . /app/
+
 
 
 # Install necessary libraries
