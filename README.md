@@ -19,11 +19,17 @@ This project uses the [SerpApi Google Trends API](https://serpapi.com/google-tre
 - A [SerpApi API Key](https://serpapi.com/)
 - A PostgreSQL database URL (optional, for writing results)
 
+### Entrypoint
+
+main.py
+
 ### Python Dependencies
 
 Install via pip:
 
 ```bash
 pip install -r requirements.txt
+
+
 
 
