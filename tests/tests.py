@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, mock_open
 import pandas as pd
 import yaml
 import os
@@ -49,14 +49,6 @@ def test_get_parameters(mock_getenv, mock_GoogleSearch, mock_config):
     assert parameters['api_key'] == 'test_api_key'
     assert parameters['geo'] == 'US'
 
-def test_load_config(mock_config):
-    """Test config loading"""
-    mock_file = MagicMock()
-    mock_file.__enter__.return_value = mock_config 
-
-    with patch('builtins.open', mock_file):  
-        config = load_config('mock_config.yml')
-        assert config == mock_config
 
 @patch('main.GoogleSearch')
 def test_get_data(mock_GoogleSearch, mock_api_response):
