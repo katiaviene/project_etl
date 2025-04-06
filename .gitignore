@@ -130,6 +130,7 @@ celerybeat.pid
 # Environments
 .env
 .myvenv
+myvenv/
 env/
 venv/
 ENV/
@@ -174,4 +175,4 @@ cython_debug/
 .pypirc
 
 ./j.json
-./myenv/
+myenv
