@@ -47,14 +47,12 @@ def normalize_data(results, fields):
 def validate_df(df):
     valid_rows = []
     errors = []
-
     for idx, row in df.iterrows():
         try:
             validated = SearchTrendModel(**row.to_dict())
             valid_rows.append(validated)
         except ValidationError as e:
             errors.append((idx, e))
-
     return valid_rows, errors
 
 def write_data(df, target_table, load="replace"):

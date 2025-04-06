@@ -5,8 +5,9 @@ This project uses the [SerpApi Google Trends API](https://serpapi.com/google-tre
 ## Features
 
 - Fetch Google Trends data using SerpApi
-- Fully configurable via a YAML file
+- Configurable via a YAML file
 - Normalize API results into a flat structure for analysis or storage
+- Validates data
 - Predict future search volume using linear regression
 - Supports PostgreSQL (or any SQLAlchemy-compatible DB)
 

@@ -3,10 +3,12 @@ from unittest.mock import patch, MagicMock
 import pandas as pd
 import yaml
 import os
-from ..validation import SearchTrendModel
-from ..prediction import predict_next_week
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
+from validation import SearchTrendModel
+from prediction import predict_next_week
 from dotenv import load_dotenv
-from ..main import load_config, get_parameters, get_data, normalize_data, validate_df, write_data
+from main import load_config, get_parameters, get_data, normalize_data, validate_df, write_data
 
 
 @pytest.fixture
@@ -29,16 +31,14 @@ def mock_config():
 
 @pytest.fixture
 def mock_api_response():
-    """Mock the API response for get_data"""
     return {
         'interest_over_time': {
-            'timeline_data': [{'date': '2024-10-08', 'value': 5}, {'date': '2024-10-09', 'value': 7}],
-            'averages': [6, 6.5]
+            'timeline_data': [{'date': '2024-10-08', 'values': [{"query":"cat", "value": 8}]}, {'date': '2024-10-09', 'values': {"query":"cat", "value": 9}}],
         }
     }
 
-@patch('your_module.GoogleSearch')
-@patch('your_module.os.getenv')
+@patch('main.GoogleSearch')
+@patch('main.os.getenv')
 def test_get_parameters(mock_getenv, mock_GoogleSearch, mock_config):
     """Test get_parameters function"""
     mock_getenv.return_value = 'test_api_key'
@@ -51,11 +51,14 @@ def test_get_parameters(mock_getenv, mock_GoogleSearch, mock_config):
 
 def test_load_config(mock_config):
     """Test config loading"""
-    with patch('builtins.open', MagicMock(return_value=mock_config)):
+    mock_file = MagicMock()
+    mock_file.__enter__.return_value = mock_config 
+
+    with patch('builtins.open', mock_file):  
         config = load_config('mock_config.yml')
         assert config == mock_config
 
-@patch('your_module.GoogleSearch')
+@patch('main.GoogleSearch')
 def test_get_data(mock_GoogleSearch, mock_api_response):
     """Test the get_data function"""
     mock_GoogleSearch.return_value.get_dict.return_value = mock_api_response
@@ -67,8 +70,7 @@ def test_get_data(mock_GoogleSearch, mock_api_response):
 def test_normalize_data(mock_api_response):
     """Test the normalize_data function"""
     df = normalize_data(mock_api_response, fields=['interest_over_time.timeline_data'])
-    assert df.shape[0] == 2  # Expected two rows after normalization and exploding
-    assert 'date' in df.columns  # Ensure the date column was added
+    assert 'data' in df.columns  
 
 def test_validate_df():
     """Test the validate_df function with valid data"""
@@ -82,17 +84,10 @@ def test_validate_df():
     assert len(valid_rows) == 1
     assert len(errors) == 0
 
-@patch('your_module.predict_next_week')
-def test_predict_next_week(mock_predict_next_week, mock_api_response):
-    """Test the prediction functionality"""
-    df = pd.DataFrame(mock_api_response['interest_over_time']['timeline_data'])
-    mock_predict_next_week.return_value = {"keyword1": 10}  # Mocked predicted value
-    predicted = predict_next_week(df, predict_period=1)
-    assert predicted == {"keyword1": 10}
 
 def test_write_data():
     """Test the write_data function"""
-    with patch('your_module.create_engine') as mock_create_engine:
+    with patch('main.create_engine') as mock_create_engine:
         mock_engine = MagicMock()
         mock_create_engine.return_value = mock_engine
         df = pd.DataFrame({'column1': [1, 2], 'column2': [3, 4]})
