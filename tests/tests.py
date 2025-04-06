@@ -6,7 +6,6 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))) 
 from validation import SearchTrendModel
 from prediction import predict_next_week
-from dotenv import load_dotenv
 from main import get_parameters, get_data, normalize_data, validate_df
 
 
